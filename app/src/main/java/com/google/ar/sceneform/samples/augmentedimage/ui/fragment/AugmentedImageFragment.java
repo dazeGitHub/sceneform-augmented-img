@@ -47,14 +47,14 @@ public class AugmentedImageFragment extends ArFragment {
     // This is the name of the image in the sample database.  A copy of the image is in the assets
     // directory.  Opening this image on your computer is a good quick way to test the augmented image
     // matching.
-    private static final String DEFAULT_IMAGE_NAME = "default.jpg";
+    private static final String DEFAULT_IMAGE_NAME = "test2.jpg"; //bucket.jpg //default.jpg
 
     // This is a pre-created database containing the sample image.
     private static final String SAMPLE_IMAGE_DATABASE = "sample_database.imgdb";
 
     // Augmented image configuration and rendering.
     // Load a single image (true) or a pre-generated image database (false).
-    private static final boolean USE_SINGLE_IMAGE = false;
+    private static final boolean USE_SINGLE_IMAGE = true;
 
     // Do a runtime check for the OpenGL level available at runtime to avoid Sceneform crashing the
     // application.
@@ -118,7 +118,7 @@ public class AugmentedImageFragment extends ArFragment {
         // * shorter setup time
         // * doesn't require images to be packaged in apk.
         if (USE_SINGLE_IMAGE) {
-            Bitmap augmentedImageBitmap = loadAugmentedImageBitmap(assetManager);
+            Bitmap augmentedImageBitmap = loadAugmentedImageBitmap(DEFAULT_IMAGE_NAME, assetManager);
             if (augmentedImageBitmap == null) {
                 return false;
             }
@@ -144,8 +144,8 @@ public class AugmentedImageFragment extends ArFragment {
         return true;
     }
 
-    private Bitmap loadAugmentedImageBitmap(AssetManager assetManager) {
-        try (InputStream is = assetManager.open(DEFAULT_IMAGE_NAME)) {
+    private Bitmap loadAugmentedImageBitmap(String fileName, AssetManager assetManager) {
+        try (InputStream is = assetManager.open(fileName)) {
             return BitmapFactory.decodeStream(is);
         } catch (IOException e) {
             Log.e(TAG, "IO exception loading augmented image bitmap.", e);

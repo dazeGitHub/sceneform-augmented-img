@@ -315,6 +315,7 @@ class MainActivity : AppCompatActivity() {
         for (augmentedImage: AugmentedImage in updatedAugmentedImages) {
             when (augmentedImage.trackingState) {
                 TrackingState.PAUSED -> {
+                    Log.d(TAG, "--- TrackingState.PAUSED ---")
                     // When an image is in PAUSED state, but the camera is not PAUSED, it has been detected,
                     // but not yet tracked.
                     tv_msg_detect.text = "检测图片成功 !"
@@ -322,6 +323,8 @@ class MainActivity : AppCompatActivity() {
                     ToastUtil.showShortToast(text)
                 }
                 TrackingState.TRACKING -> {
+                    Log.d(TAG, "--- TrackingState.TRACKING ---")
+                    ToastUtil.showShortToast("检测图片轨迹成功 !")
                     // Have to switch to UI Thread to update View.
                     iv_scan.visibility = View.GONE
 
@@ -339,6 +342,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 TrackingState.STOPPED -> {
+                    Log.d(TAG, "--- TrackingState.STOPPED ---")
                     mAugmentedImageAnchorNodeMap.remove(augmentedImage.index)
                     mAugmentedImageAddedNodeMap.remove(augmentedImage)
                 }
