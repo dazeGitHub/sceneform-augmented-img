@@ -32,7 +32,7 @@ import android.view.ViewGroup;
 import com.google.ar.core.AugmentedImageDatabase;
 import com.google.ar.core.Config;
 import com.google.ar.core.Session;
-import com.google.ar.sceneform.samples.augmentedimage.common.utils.ToastUtil;
+import com.google.ar.sceneform.samples.augmentedimage.app.utils.ToastUtil;
 import com.google.ar.sceneform.ux.ArFragment;
 
 import java.io.IOException;

@@ -23,8 +23,8 @@ import com.google.ar.core.AugmentedImage
 import com.google.ar.core.TrackingState
 import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.samples.augmentedimage.R
-import com.google.ar.sceneform.samples.augmentedimage.common.augmentedimage.AugmentedImageNode
-import com.google.ar.sceneform.samples.augmentedimage.common.utils.ToastUtil
+import com.google.ar.sceneform.samples.augmentedimage.app.common.augmentedimage.AugmentedImageNode
+import com.google.ar.sceneform.samples.augmentedimage.app.utils.ToastUtil
 import com.google.ar.sceneform.ux.ArFragment
 import java.util.*
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ar.sceneform.samples.augmentedimage.common.augmentedimage;
+package com.google.ar.sceneform.samples.augmentedimage.app.common.augmentedimage;
 
 import android.content.Context;
 import android.net.Uri;

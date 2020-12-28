@@ -1,4 +1,4 @@
-package com.google.ar.sceneform.samples.augmentedimage.common.utils
+package com.google.ar.sceneform.samples.augmentedimage.app.utils
 
 import android.app.Activity
 import android.app.ActivityManager

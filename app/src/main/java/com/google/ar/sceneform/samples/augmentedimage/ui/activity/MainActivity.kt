@@ -1,28 +1,33 @@
 package com.google.ar.sceneform.samples.augmentedimage.ui.activity
 
 import android.content.Intent
-import android.graphics.SurfaceTexture
-import android.graphics.SurfaceTexture.OnFrameAvailableListener
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.google.ar.core.*
-import com.google.ar.core.Pose.makeTranslation
 import com.google.ar.sceneform.AnchorNode
 import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.Node
 import com.google.ar.sceneform.Scene.OnUpdateListener
 import com.google.ar.sceneform.math.Vector3
-import com.google.ar.sceneform.rendering.*
+import com.google.ar.sceneform.rendering.ExternalTexture
+import com.google.ar.sceneform.rendering.ModelRenderable
+import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.ViewRenderable
 import com.google.ar.sceneform.samples.augmentedimage.R
-import com.google.ar.sceneform.samples.augmentedimage.common.augmentedimage.AugmentedImageNode
-import com.google.ar.sceneform.samples.augmentedimage.common.helpers.CameraPermissionHelper
-import com.google.ar.sceneform.samples.augmentedimage.common.utils.ToastUtil
+import com.google.ar.sceneform.samples.augmentedimage.app.common.augmentedimage.AugmentedImageNode
+import com.google.ar.sceneform.samples.augmentedimage.app.common.helpers.CameraPermissionHelper
+import com.google.ar.sceneform.samples.augmentedimage.app.ext.addLight
+import com.google.ar.sceneform.samples.augmentedimage.app.ext.addOneNode
+import com.google.ar.sceneform.samples.augmentedimage.app.ext.addVideo
+import com.google.ar.sceneform.samples.augmentedimage.app.ext.alterPlane
+import com.google.ar.sceneform.samples.augmentedimage.app.utils.ToastUtil
+import com.google.ar.sceneform.samples.augmentedimage.data.Constants
 import com.google.ar.sceneform.ux.ArFragment
-import com.google.ar.sceneform.ux.TransformableNode
+import com.google.ar.sceneform.ux.BaseArFragment
 import kotlinx.android.synthetic.main.activity_main.*
 import java.lang.ref.WeakReference
 import java.util.*
@@ -31,18 +36,16 @@ import java.util.function.Consumer
 
 class MainActivity : AppCompatActivity() {
 
-    private var mArFragment: ArFragment? = null
+    var mArFragment: ArFragment? = null
     private var mTigerRenderable: Renderable? = null
     private var mSimpleImgRenderable: Renderable? = null
-    private var mAnchorNode: AnchorNode? = null
     private var mVideoNode: Node? = null //最新添加的视频节点
+    private var mAnchorNode: AnchorNode? = null
 
     private var mIsShowOptions = false
 
-    // Augmented image and its associated center pose anchor, keyed by the augmented image in
-    // the database.
-    private val augmentedImageMap: HashMap<AugmentedImage, AugmentedImageNode> = HashMap<AugmentedImage, AugmentedImageNode>()
-    private var mSingleAugmentedImage: AugmentedImage? = null
+    //key 是识别出来的图像，value 是以该图像为锚点添加的节点
+    private val mAugmentedImageNodeMap: HashMap<AugmentedImage, Node> = HashMap<AugmentedImage, Node>()
 
     //--- video 相关---
     private var mTigerVideoRenderable: ModelRenderable? = null
@@ -52,12 +55,6 @@ class MainActivity : AppCompatActivity() {
     private var mToysVideoRenderable: ModelRenderable? = null
     private var mToysMediaPlayer: MediaPlayer? = null
     private var mToysVideoTexture: ExternalTexture? = null
-
-    // The color to filter out of the video.
-    private val CHROMA_KEY_COLOR = Color(0.1843f, 1.0f, 0.098f)
-
-    // Controls the height of the video in world space.
-    private val VIDEO_HEIGHT_METERS = 0.25f //0.85f
 
     // CompletableFuture requires api level 24
     // FutureReturnValueIgnored is not valid
@@ -76,7 +73,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (augmentedImageMap.isEmpty()) {
+        if (mAugmentedImageNodeMap.isEmpty()) {
             iv_scan.visibility = View.VISIBLE
         }
     }
@@ -111,13 +108,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initListener() {
-        mArFragment!!.getArSceneView().getScene().addOnUpdateListener(OnUpdateListener { frameTime: FrameTime -> this.onUpdateFrame(frameTime) })
-
-//        mArFragment!!.setOnTapArPlaneListener { hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent? ->
-//            if (mAnchor == null) {
-//                mAnchor = addAnchor(hitResult)
-//            }
-//        }
+        mArFragment?.arSceneView?.scene?.addOnUpdateListener(OnUpdateListener { frameTime: FrameTime -> this.onUpdateFrame(frameTime) })
+        mArFragment?.setOnTapArPlaneListener(object : BaseArFragment.OnTapArPlaneListener { //暂时识别不了
+            override fun onTapPlane(hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent?) {
+                ToastUtil.showShortToast("点击了平面")
+                if (mAnchorNode == null) {
+                    mAnchorNode = addAnchorOnTap(hitResult)
+                }
+            }
+        })
 
         btn_open_argument_img.setOnClickListener {
             startActivity(Intent(this@MainActivity, AugmentedImageActivity::class.java))
@@ -130,7 +129,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btn_alter_plane.setOnClickListener {
-            alterPlane()
+            alterPlane(R.drawable.transparent_texture)
         }
 
         btn_add_node_gltf.setOnClickListener {
@@ -143,15 +142,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         btn_add_light.setOnClickListener {
-            addLight()
+            addLight(mAnchorNode)
         }
 
         btn_add_tiger_node_video.setOnClickListener {//添加 mp4 视频
-            addVideo(mTigerVideoRenderable, mTigerMediaPlayer, mTigerVideoTexture)
+            mVideoNode = addVideo(mAnchorNode, mTigerVideoRenderable, mTigerMediaPlayer, mTigerVideoTexture)
         }
 
         btn_add_node_video_toys.setOnClickListener{
-            addVideo(mToysVideoRenderable, mToysMediaPlayer, mToysVideoTexture)
+            mVideoNode = addVideo(mAnchorNode, mToysVideoRenderable, mToysMediaPlayer, mToysVideoTexture)
         }
 
         btn_see_cur_scene_nodes.setOnClickListener {
@@ -164,68 +163,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun addVideo(videoRenderable: ModelRenderable?, mediaPlayer: MediaPlayer?, externalTexture: ExternalTexture?) {
-        if (videoRenderable == null) {
-            ToastUtil.showShortToast("videoRenderable 是空的，无法添加资源")
-            return
-        }
-        // Create a node to render the video and add it to the anchor.
-
-        // Create a node to render the video and add it to the anchor.
-        mVideoNode = Node()
-        mVideoNode?.setParent(mAnchorNode)
-
-        ToastUtil.showShortToast("添加了一个视频节点")
-
-        // Set the scale of the node so that the aspect ratio of the video is correct.
-
-        // Set the scale of the node so that the aspect ratio of the video is correct.
-        val videoWidth = mediaPlayer!!.videoWidth.toFloat()
-        val videoHeight = mediaPlayer!!.videoHeight.toFloat()
-        mVideoNode?.localScale = Vector3(VIDEO_HEIGHT_METERS * (videoWidth / videoHeight), VIDEO_HEIGHT_METERS, 1.0f)
-
-        mVideoNode?.localRotation = com.google.ar.sceneform.math.Quaternion(Vector3(1f, 0f, 0f), -90f) //0 1 2 / 0 0 0 是竖向扁的，0 1 0 是横向扁的，1 0 0 是正常的正面的
-        // Start playing the video when the first node is placed.
-
-        // Start playing the video when the first node is placed.
-        if (!mediaPlayer!!.isPlaying) {
-            mediaPlayer!!.start()
-
-            // Wait to set the renderable until the first frame of the  video becomes available.
-            // This prevents the renderable from briefly appearing as a black quad before the video
-            // plays.
-            externalTexture?.let {
-                it.surfaceTexture
-                        .setOnFrameAvailableListener(
-                                OnFrameAvailableListener { surfaceTexture: SurfaceTexture? ->
-                                    mVideoNode?.renderable = videoRenderable
-                                    it.surfaceTexture.setOnFrameAvailableListener(null)
-                                })
-            }
-        } else {
-            mVideoNode?.renderable = videoRenderable
-        }
-    }
-
-    private fun addOneNode(anchor: AnchorNode?, renderable: Renderable) {
-        if (anchor == null) {
-            ToastUtil.showShortToast("锚点不能为空")
-            return
-        }
-
-        // Create the transformable model and add it to the anchor.
-        val model = TransformableNode(mArFragment!!.transformationSystem)
-        model.setParent(anchor)
-        model.scaleController.maxScale = 0.2f
-        model.scaleController.minScale = 0.1f
-        model.renderable = renderable
-        model.select()
-
-        val simpleImgNode = Node()
-        simpleImgNode.setParent(model)
-        simpleImgNode.isEnabled = false
-        simpleImgNode.localPosition = Vector3(0.0f, 1.0f, 0.0f)
-    }
+//    private fun getAnchorNode():AnchorNode?{
+//        if(mAnchorNode != null){
+//            return mAnchorNode
+//        }
+//        var index = 0 //暂时只要第一个图的第一个锚点
+//        for ((key,value) in mAugmentedImageNodeMap){
+//            if(key.anchors.isNotEmpty()){
+//                mAnchorNode = AnchorNode(key.anchors.toTypedArray()[0])
+//                return mAnchorNode
+//            }
+//            index += 1
+//            if(index == 1){
+//                break
+//            }
+//        }
+//        return null
+//    }
 
     private fun addSimpleImgNode() {
         addOneNode(mAnchorNode, mSimpleImgRenderable!!)
@@ -235,7 +189,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * 点击平面时添加一个锚点，之后所有节点用这一个锚点
      */
-    private fun addAnchor(hitResult: HitResult): AnchorNode {
+    private fun addAnchorOnTap(hitResult: HitResult): AnchorNode {
         //父子关系: child -> Parent
         // tigerTitleNode -> TransformableNode 的 model -> anchorNode -> arFragment.getArSceneView().getScene()
         // Create the Anchor.
@@ -257,40 +211,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 测试四元数
-     * lastParam ??
-     */
-    private fun testQuaternion(x: Int, y: Int, z: Int, lastParam: Int) {
-        if (mAnchorNode == null) {
-            ToastUtil.showShortToast("mAnchorNode 是空的")
-            return
-        }
-//        var newPose = Pose.makeRotation(x, y, z, lastParam)
-
-        var nodeList = mArFragment!!.arSceneView.scene.children
-        if (nodeList.isNotEmpty()) {
-            //把第 0 个节点移除
-//            mArFragment!!.arSceneView.scene.removeChild(nodeList.get(0))
-
-            //包含 X、Y、Z
-            val translationArray = mSingleAugmentedImage?.centerPose?.translation
-            //返回一个四元数
-            val rotationQuaternion = mSingleAugmentedImage?.centerPose?.rotationQuaternion
-
-            Log.d(TAG, "translationArray=" + translationArray + "rotationQuaternion =$rotationQuaternion")
-
-            var transX = 0f
-            var transY = 0f
-            var transZ = 0f
-            var transPos: Pose = makeTranslation(transX, transY, transZ)
-
-//            mSingleAugmentedImage?.centerPose?.rotateVector(floatArrayOf(x.toFloat()), y, floatArrayOf(z.toFloat()), lastParam)
-//            mSingleAugmentedImage?.createAnchor()
-//            addAnchorToScene()
-        }
-    }
-
-    /**
      * 向 Scene 中添加一个锚点
      */
     private fun addAnchorToScene(anchor: Anchor) {
@@ -306,46 +226,6 @@ class MainActivity : AppCompatActivity() {
         }
         addOneNode(mAnchorNode, mTigerRenderable!!)
         ToastUtil.showShortToast("添加了一个老虎节点")
-    }
-
-    private fun addLight() {
-        if (mAnchorNode == null) {
-            ToastUtil.showShortToast("锚点为空，请点击平面添加锚点")
-            return
-        }
-
-        //添加一个聚光灯
-        val myLight = Light.builder(Light.Type.DIRECTIONAL)
-                .setColor(Color(0xffff00))
-                .setShadowCastingEnabled(true)
-                .build()
-
-        ToastUtil.showShortToast("为锚点添加了一个灯光")
-
-        mAnchorNode?.light = myLight
-    }
-
-    private fun alterPlane() {
-        //修改平面
-        val sampler: Texture.Sampler = Texture.Sampler.builder()
-                .setMagFilter(Texture.Sampler.MagFilter.LINEAR)
-                .setWrapMode(Texture.Sampler.WrapMode.REPEAT)
-                .build()
-
-        Texture.builder()
-                .setSource(this, R.drawable.transparent_texture)
-                .setSampler(sampler)
-                .build()
-                .thenAccept { texture ->
-                    mArFragment!!.arSceneView.getPlaneRenderer()
-                            .material
-                            .get()
-                            .setTexture(PlaneRenderer.MATERIAL_TEXTURE, texture)
-                }.exceptionally { throwable: Throwable? ->
-                    ToastUtil.showShortToast("set Texture failed" + throwable?.message)
-                    Log.e(TAG, "set Texture failed" + throwable?.message)
-                    null
-                }
     }
 
     private fun loadResource() {
@@ -401,8 +281,6 @@ class MainActivity : AppCompatActivity() {
         mTigerVideoTexture = ExternalTexture()
 
         // Create an Android MediaPlayer to capture the video on the external texture's surface.
-
-        // Create an Android MediaPlayer to capture the video on the external texture's surface.
         mTigerMediaPlayer = MediaPlayer.create(this, R.raw.lion_chroma)
         mTigerMediaPlayer?.setSurface(mTigerVideoTexture!!.surface)
         mTigerMediaPlayer?.isLooping = true
@@ -413,7 +291,7 @@ class MainActivity : AppCompatActivity() {
                 .thenAccept { renderable: ModelRenderable ->
                     mTigerVideoRenderable = renderable
                     renderable.material.setExternalTexture("videoTexture", mTigerVideoTexture)
-                    renderable.material.setFloat4("keyColor", CHROMA_KEY_COLOR)
+                    renderable.material.setFloat4("keyColor", Constants.CHROMA_KEY_COLOR)
                 }
                 .exceptionally { throwable: Throwable? ->
                     ToastUtil.showShortToast("Unable to load video renderable")
@@ -423,8 +301,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadToysVideoRes(){
         mToysVideoTexture = ExternalTexture()
-
-        // Create an Android MediaPlayer to capture the video on the external texture's surface.
 
         // Create an Android MediaPlayer to capture the video on the external texture's surface.
         mToysMediaPlayer = MediaPlayer.create(this, R.raw.toys)
@@ -437,7 +313,7 @@ class MainActivity : AppCompatActivity() {
                 .thenAccept { renderable: ModelRenderable ->
                     mToysVideoRenderable = renderable
                     renderable.material.setExternalTexture("videoTexture", mToysVideoTexture)
-                    renderable.material.setFloat4("keyColor", CHROMA_KEY_COLOR)
+                    renderable.material.setFloat4("keyColor", Constants.CHROMA_KEY_COLOR)
                 }
                 .exceptionally { throwable: Throwable? ->
                     ToastUtil.showShortToast("Unable to load video renderable")
@@ -461,7 +337,7 @@ class MainActivity : AppCompatActivity() {
                     // When an image is in PAUSED state, but the camera is not PAUSED, it has been detected,
                     // but not yet tracked.
                     tv_msg_detect.text = "检测图片成功 !"
-                    val text = "检测到图像，索引 augmentedImage.index = " + augmentedImage.index
+                    val text = "检测到图像，索引 augmentedImage.index = " + augmentedImage.index + " augmentedImage.name=" + augmentedImage.name
                     ToastUtil.showShortToast(text)
                 }
                 TrackingState.TRACKING -> {
@@ -469,30 +345,29 @@ class MainActivity : AppCompatActivity() {
                     iv_scan.visibility = View.GONE
 
                     // Create a new anchor for newly found images.
-                    if (!augmentedImageMap.containsKey(augmentedImage)) {
+                    if (!mAugmentedImageNodeMap.containsKey(augmentedImage)) {
+                        Log.d(TAG,"onUpdateFrame  !mAugmentedImageMap.containsKey(augmentedImage)")
                         //添加 Anchor 到图片中心
                         kotlin.runCatching {
                             addAnchorToScene(augmentedImage.createAnchor(augmentedImage.centerPose))
                         }.onFailure {
                             ToastUtil.showShortToast("onUpdateFrame err msg =" + it.message)
                         }
-                        if (mSingleAugmentedImage == null) {
-                            mSingleAugmentedImage = augmentedImage
-                        }
-                        //添加检测到的图像的四个角，是 mArFragment?.arSceneView?.scene 的第二个元素
-                        val node = AugmentedImageNode(this)
-                        node.image = augmentedImage
-                        augmentedImageMap.put(augmentedImage, node)
+                        //添加检测到的图像的四个角
+                        val node = AugmentedImageNode(this) // AugmentedImageNode 就是带 4 个角的图像节点
+                        node.setImage(augmentedImage)//为该节点添加 augmentedImage，并自动设置锚点为 augmentedImage 中央
+                        Log.d(TAG, "-- mAugmentedImageMap put node --, augmentedImage.name=" + augmentedImage.name)
+                        mAugmentedImageNodeMap.put(augmentedImage, node)
                         mArFragment?.arSceneView?.scene?.addChild(node)
                     }
                 }
-                TrackingState.STOPPED -> augmentedImageMap.remove(augmentedImage)
+                TrackingState.STOPPED -> mAugmentedImageNodeMap.remove(augmentedImage)
             }
         }
     }
 
     companion object {
-        private val TAG = MainActivity::class.java.simpleName
+        val TAG = MainActivity::class.java.simpleName
         private const val MIN_OPENGL_VERSION = 3.0
     }
 }
