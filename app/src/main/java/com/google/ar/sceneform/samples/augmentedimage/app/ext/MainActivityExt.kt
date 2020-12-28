@@ -3,10 +3,14 @@ package com.google.ar.sceneform.samples.augmentedimage.app.ext
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
 import android.util.Log
+import android.view.MotionEvent
+import com.google.ar.core.AugmentedImage
 import com.google.ar.sceneform.AnchorNode
+import com.google.ar.sceneform.HitTestResult
 import com.google.ar.sceneform.Node
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
+import com.google.ar.sceneform.samples.augmentedimage.app.common.augmentedimage.AugmentedImageNode
 import com.google.ar.sceneform.samples.augmentedimage.app.utils.ToastUtil
 import com.google.ar.sceneform.samples.augmentedimage.data.Constants
 import com.google.ar.sceneform.samples.augmentedimage.ui.activity.MainActivity
@@ -114,6 +118,25 @@ fun MainActivity.addOneNode(anchor: AnchorNode?, renderable: Renderable) {
     simpleImgNode.setParent(model)
     simpleImgNode.isEnabled = false
     simpleImgNode.localPosition = Vector3(0.0f, 1.0f, 0.0f)
+}
+
+fun MainActivity.addAnchorToDetectedImgCenter(augmentedImage : AugmentedImage){
+    val anchorNode = AnchorNode(augmentedImage.createAnchor(augmentedImage.centerPose))
+    anchorNode.setParent(mArFragment!!.arSceneView.scene)
+    mAugmentedImageAnchorNodeMap.put(augmentedImage.index, anchorNode)
+}
+
+fun MainActivity.addArgumentedImgNode(augmentedImage : AugmentedImage){
+    val node = AugmentedImageNode(this) // AugmentedImageNode 就是带 4 个角的图像节点
+    node.setImage(augmentedImage)//为该节点添加 augmentedImage，并自动设置锚点为 augmentedImage 中央
+    node.setOnTapListener { hitResult, motionEvent ->
+        if(motionEvent?.action == MotionEvent.ACTION_UP){
+            ToastUtil.showShortToast("点击了节点 augmentedImage index=" + augmentedImage.index + " name=" + augmentedImage.name)
+        }
+    }
+    Log.d(MainActivity.TAG, "-- mAugmentedImageMap put node --, augmentedImage.name=" + augmentedImage.name)
+    mAugmentedImageAddedNodeMap.put(augmentedImage, node)
+    mArFragment?.arSceneView?.scene?.addChild(node)
 }
 
 fun addLight(anchor: AnchorNode?) {

@@ -18,12 +18,8 @@ import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.ViewRenderable
 import com.google.ar.sceneform.samples.augmentedimage.R
-import com.google.ar.sceneform.samples.augmentedimage.app.common.augmentedimage.AugmentedImageNode
 import com.google.ar.sceneform.samples.augmentedimage.app.common.helpers.CameraPermissionHelper
-import com.google.ar.sceneform.samples.augmentedimage.app.ext.addLight
-import com.google.ar.sceneform.samples.augmentedimage.app.ext.addOneNode
-import com.google.ar.sceneform.samples.augmentedimage.app.ext.addVideo
-import com.google.ar.sceneform.samples.augmentedimage.app.ext.alterPlane
+import com.google.ar.sceneform.samples.augmentedimage.app.ext.*
 import com.google.ar.sceneform.samples.augmentedimage.app.utils.ToastUtil
 import com.google.ar.sceneform.samples.augmentedimage.data.Constants
 import com.google.ar.sceneform.ux.ArFragment
@@ -40,12 +36,14 @@ class MainActivity : AppCompatActivity() {
     private var mTigerRenderable: Renderable? = null
     private var mSimpleImgRenderable: Renderable? = null
     private var mVideoNode: Node? = null //最新添加的视频节点
-    private var mAnchorNode: AnchorNode? = null
 
     private var mIsShowOptions = false
 
     //key 是识别出来的图像，value 是以该图像为锚点添加的节点
-    private val mAugmentedImageNodeMap: HashMap<AugmentedImage, Node> = HashMap<AugmentedImage, Node>()
+    val mAugmentedImageAddedNodeMap: HashMap<AugmentedImage, Node> = HashMap<AugmentedImage, Node>()
+
+    //key 是识别出来的图像索引(第几个图像)，value 是给该图像添加的锚点节点
+    val mAugmentedImageAnchorNodeMap: HashMap<Int, AnchorNode> = HashMap()
 
     //--- video 相关---
     private var mTigerVideoRenderable: ModelRenderable? = null
@@ -73,7 +71,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (mAugmentedImageNodeMap.isEmpty()) {
+        if (mAugmentedImageAddedNodeMap.isEmpty()) {
             iv_scan.visibility = View.VISIBLE
         }
     }
@@ -112,9 +110,9 @@ class MainActivity : AppCompatActivity() {
         mArFragment?.setOnTapArPlaneListener(object : BaseArFragment.OnTapArPlaneListener { //暂时识别不了
             override fun onTapPlane(hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent?) {
                 ToastUtil.showShortToast("点击了平面")
-                if (mAnchorNode == null) {
-                    mAnchorNode = addAnchorOnTap(hitResult)
-                }
+//                if (getAnchorNode() == null) {
+//                    getAnchorNode() = addAnchorOnTap(hitResult)
+//                }
             }
         })
 
@@ -142,15 +140,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         btn_add_light.setOnClickListener {
-            addLight(mAnchorNode)
+            addLight(getAnchorNode())
         }
 
         btn_add_tiger_node_video.setOnClickListener {//添加 mp4 视频
-            mVideoNode = addVideo(mAnchorNode, mTigerVideoRenderable, mTigerMediaPlayer, mTigerVideoTexture)
+            mVideoNode = addVideo(getAnchorNode(), mTigerVideoRenderable, mTigerMediaPlayer, mTigerVideoTexture)
         }
 
-        btn_add_node_video_toys.setOnClickListener{
-            mVideoNode = addVideo(mAnchorNode, mToysVideoRenderable, mToysMediaPlayer, mToysVideoTexture)
+        btn_add_node_video_toys.setOnClickListener {
+            mVideoNode = addVideo(getAnchorNode(), mToysVideoRenderable, mToysMediaPlayer, mToysVideoTexture)
         }
 
         btn_see_cur_scene_nodes.setOnClickListener {
@@ -163,44 +161,36 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-//    private fun getAnchorNode():AnchorNode?{
-//        if(mAnchorNode != null){
-//            return mAnchorNode
-//        }
-//        var index = 0 //暂时只要第一个图的第一个锚点
-//        for ((key,value) in mAugmentedImageNodeMap){
-//            if(key.anchors.isNotEmpty()){
-//                mAnchorNode = AnchorNode(key.anchors.toTypedArray()[0])
-//                return mAnchorNode
-//            }
-//            index += 1
-//            if(index == 1){
-//                break
-//            }
-//        }
-//        return null
-//    }
+    private fun getAnchorNode(): AnchorNode? {
+        //默认取第 1 个检测到的图片的锚点
+        val index = 0
+        Log.d(TAG, "getAnchorNode 取第 $index 个检测到的图片的锚点")
+        if (mAugmentedImageAnchorNodeMap.isNotEmpty()) {
+            return mAugmentedImageAnchorNodeMap[index]
+        }
+        return null
+    }
 
     private fun addSimpleImgNode() {
-        addOneNode(mAnchorNode, mSimpleImgRenderable!!)
+        addOneNode(getAnchorNode(), mSimpleImgRenderable!!)
         ToastUtil.showShortToast("添加了一个简单图片节点")
     }
 
-    /**
-     * 点击平面时添加一个锚点，之后所有节点用这一个锚点
-     */
-    private fun addAnchorOnTap(hitResult: HitResult): AnchorNode {
-        //父子关系: child -> Parent
-        // tigerTitleNode -> TransformableNode 的 model -> anchorNode -> arFragment.getArSceneView().getScene()
-        // Create the Anchor.
-        val anchor = hitResult.createAnchor()
-        val anchorNode = AnchorNode(anchor)
-        anchorNode.setParent(mArFragment!!.arSceneView.scene)
-
-        ToastUtil.showShortToast("添加锚点成功")
-
-        return anchorNode
-    }
+//    /**
+//     * 点击平面时添加一个锚点，之后所有节点用这一个锚点
+//     */
+//    private fun addAnchorOnTap(hitResult: HitResult): AnchorNode {
+//        //父子关系: child -> Parent
+//        // tigerTitleNode -> TransformableNode 的 model -> anchorNode -> arFragment.getArSceneView().getScene()
+//        // Create the Anchor.
+//        val anchor = hitResult.createAnchor()
+//        val anchorNode = AnchorNode(anchor)
+//        anchorNode.setParent(mArFragment!!.arSceneView.scene)
+//
+//        ToastUtil.showShortToast("添加锚点成功")
+//
+//        return anchorNode
+//    }
 
     private fun rotateVideoNode() {
         if (mVideoNode == null) {
@@ -210,21 +200,12 @@ class MainActivity : AppCompatActivity() {
         mVideoNode?.localRotation = com.google.ar.sceneform.math.Quaternion(Vector3(1f, 0f, 0f), -270f) //-270f 旋转 180 度，0f 和 -180f 扁了
     }
 
-    /**
-     * 向 Scene 中添加一个锚点
-     */
-    private fun addAnchorToScene(anchor: Anchor) {
-        val anchorNode = AnchorNode(anchor)
-        anchorNode.setParent(mArFragment!!.arSceneView.scene)
-        mAnchorNode = anchorNode
-    }
-
     private fun addTigerNode() {
         if (mTigerRenderable == null) {
             ToastUtil.showShortToast("老虎 gltf 资源加载失败，无法添加节点")
             return
         }
-        addOneNode(mAnchorNode, mTigerRenderable!!)
+        addOneNode(getAnchorNode(), mTigerRenderable!!)
         ToastUtil.showShortToast("添加了一个老虎节点")
     }
 
@@ -235,7 +216,7 @@ class MainActivity : AppCompatActivity() {
         loadToysVideoRes()
     }
 
-    private fun loadGlbRes(){
+    private fun loadGlbRes() {
         val weakActivity = WeakReference(this)
 
         //添加老虎 glb 资源   报错 java.util.concurrent.CompletionException: java.lang.AssertionError: No RCB file at uri: https://storage.googleapis.com/ar-answers-in-search-models/static/Tiger/model.glb
@@ -257,7 +238,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun loadSimpleImgRes(){
+    private fun loadSimpleImgRes() {
         //添加简单图片资源
         ViewRenderable.builder()
                 .setView(this, R.layout.layout_simple_img) //
@@ -265,7 +246,7 @@ class MainActivity : AppCompatActivity() {
                 .thenAccept(Consumer { renderable: ViewRenderable -> mSimpleImgRenderable = renderable })
     }
 
-    private fun loadTigerVideoRes(){
+    private fun loadTigerVideoRes() {
         //添加视频资源
         //
         // Create a renderable with a material that has a parameter of type 'samplerExternal' so that
@@ -299,7 +280,7 @@ class MainActivity : AppCompatActivity() {
                 }
     }
 
-    private fun loadToysVideoRes(){
+    private fun loadToysVideoRes() {
         mToysVideoTexture = ExternalTexture()
 
         // Create an Android MediaPlayer to capture the video on the external texture's surface.
@@ -331,7 +312,7 @@ class MainActivity : AppCompatActivity() {
 
         // If there is no frame, just return.
         val updatedAugmentedImages = frame.getUpdatedTrackables(AugmentedImage::class.java)
-        for (augmentedImage in updatedAugmentedImages) {
+        for (augmentedImage: AugmentedImage in updatedAugmentedImages) {
             when (augmentedImage.trackingState) {
                 TrackingState.PAUSED -> {
                     // When an image is in PAUSED state, but the camera is not PAUSED, it has been detected,
@@ -345,23 +326,22 @@ class MainActivity : AppCompatActivity() {
                     iv_scan.visibility = View.GONE
 
                     // Create a new anchor for newly found images.
-                    if (!mAugmentedImageNodeMap.containsKey(augmentedImage)) {
-                        Log.d(TAG,"onUpdateFrame  !mAugmentedImageMap.containsKey(augmentedImage)")
+                    if (!mAugmentedImageAddedNodeMap.containsKey(augmentedImage)) {
+                        Log.d(TAG, "onUpdateFrame  !mAugmentedImageMap.containsKey(augmentedImage)")
                         //添加 Anchor 到图片中心
                         kotlin.runCatching {
-                            addAnchorToScene(augmentedImage.createAnchor(augmentedImage.centerPose))
+                            addAnchorToDetectedImgCenter(augmentedImage)
                         }.onFailure {
                             ToastUtil.showShortToast("onUpdateFrame err msg =" + it.message)
                         }
                         //添加检测到的图像的四个角
-                        val node = AugmentedImageNode(this) // AugmentedImageNode 就是带 4 个角的图像节点
-                        node.setImage(augmentedImage)//为该节点添加 augmentedImage，并自动设置锚点为 augmentedImage 中央
-                        Log.d(TAG, "-- mAugmentedImageMap put node --, augmentedImage.name=" + augmentedImage.name)
-                        mAugmentedImageNodeMap.put(augmentedImage, node)
-                        mArFragment?.arSceneView?.scene?.addChild(node)
+                        addArgumentedImgNode(augmentedImage)
                     }
                 }
-                TrackingState.STOPPED -> mAugmentedImageNodeMap.remove(augmentedImage)
+                TrackingState.STOPPED -> {
+                    mAugmentedImageAnchorNodeMap.remove(augmentedImage.index)
+                    mAugmentedImageAddedNodeMap.remove(augmentedImage)
+                }
             }
         }
     }
