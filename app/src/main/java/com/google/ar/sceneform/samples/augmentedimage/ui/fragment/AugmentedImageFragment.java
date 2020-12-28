@@ -42,7 +42,7 @@ import java.io.InputStream;
  * Extend the ArFragment to customize the ARCore session configuration to include Augmented Images.
  */
 public class AugmentedImageFragment extends ArFragment {
-    private static final String TAG = "AugmentedImageFragment";
+    private static final String TAG = "AugmentedImageFragment1";
 
     // This is the name of the image in the sample database.  A copy of the image is in the assets
     // directory.  Opening this image on your computer is a good quick way to test the augmented image

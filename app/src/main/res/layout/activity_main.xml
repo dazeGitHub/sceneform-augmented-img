@@ -19,7 +19,7 @@
     <!--  检测平面使用: com.google.ar.sceneform.ux.ArFragment  -->
     <!--  检测图片使用: com.google.ar.sceneform.samples.gltf.ui.fragment.AugmentedImageFragment  -->
     <fragment
-        android:id="@+id/ar_fragment"
+        android:id="@+id/ar_fragment1"
         android:name="com.google.ar.sceneform.samples.augmentedimage.ui.fragment.AugmentedImageFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
@@ -55,6 +55,7 @@
         android:layout_height="wrap_content"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        android:visibility="gone"
         >
 
         <Button

@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_main)
-        mArFragment = supportFragmentManager.findFragmentById(R.id.ar_fragment) as ArFragment?
+        mArFragment = supportFragmentManager.findFragmentById(R.id.ar_fragment1) as ArFragment?
         initData()
     }
 
@@ -97,7 +97,7 @@ class MainActivity : AppCompatActivity() {
             finish()
         } else {
             setContentView(R.layout.activity_main)
-            mArFragment = supportFragmentManager.findFragmentById(R.id.ar_fragment) as ArFragment?
+            mArFragment = supportFragmentManager.findFragmentById(R.id.ar_fragment1) as ArFragment?
             initData()
         }
     }
