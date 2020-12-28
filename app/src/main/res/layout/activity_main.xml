@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.activity.MainActivity">
+
+    <!-- 这个 iv_scan 不一定能显示，不用管 -->
+    <ImageView
+        android:id="@+id/iv_scan"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:contentDescription="@string/fit_image_to_scan"
+        android:scaleType="fitCenter"
+        android:src="@drawable/fit_to_scan" />
+
+    <!--  检测平面使用: com.google.ar.sceneform.ux.ArFragment  -->
+    <!--  检测图片使用: com.google.ar.sceneform.samples.gltf.ui.fragment.AugmentedImageFragment  -->
+    <fragment
+        android:id="@+id/ar_fragment"
+        android:name="com.google.ar.sceneform.samples.augmentedimage.ui.fragment.AugmentedImageFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:id="@+id/tv_msg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="#000000"
+        android:textColor="@color/white"
+        android:padding="10dp"
+        android:text="请对准地球图片，待检测到图片成功时(有四个角)再添加节点"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tv_msg_detect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:textColor="@color/black"
+        android:padding="10dp"
+        android:text="正在检测图片..."
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_msg"
+        />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/con_options_parent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        >
+
+        <Button
+            android:id="@+id/btn_open_argument_img"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@color/white"
+            android:padding="10dp"
+            android:text="打开 argument img 界面"
+            android:textColor="@color/black"
+            app:layout_constraintBottom_toTopOf="@+id/btn_see_cur_scene_nodes"
+            app:layout_constraintLeft_toLeftOf="parent" />
+
+        <Button
+            android:id="@+id/btn_see_cur_scene_nodes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@color/white"
+            android:padding="10dp"
+            android:text="查看当前 scene 有多少节点"
+            android:textColor="@color/black"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/btn_alter_plane"
+            />
+
+        <Button
+            android:id="@+id/btn_alter_plane"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@color/white"
+            android:padding="10dp"
+            android:text="修改平面白圈为透明"
+            android:visibility="gone"
+            android:textColor="@color/black"
+            app:layout_constraintBottom_toTopOf="@+id/btn_add_node_gltf"
+            app:layout_constraintLeft_toLeftOf="parent" />
+
+        <Button
+            android:id="@+id/btn_add_node_gltf"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@color/white"
+            android:padding="10dp"
+            android:text="添加一个节点 （使用 gltf 老虎资源）"
+            android:textColor="@color/black"
+            app:layout_constraintBottom_toTopOf="@+id/btn_add_node_img"
+            app:layout_constraintLeft_toLeftOf="parent" />
+
+        <Button
+            android:id="@+id/btn_add_node_img"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@color/white"
+            android:padding="10dp"
+            android:text="添加一个节点 （使用图片）"
+            android:textColor="@color/black"
+            app:layout_constraintBottom_toTopOf="@+id/btn_add_tiger_node_video"
+            app:layout_constraintLeft_toLeftOf="parent"
+            />
+
+        <Button
+            android:id="@+id/btn_add_tiger_node_video"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@color/white"
+            android:padding="10dp"
+            android:text="添加一个节点 （使用 mp4 老虎视频）"
+            android:textColor="@color/black"
+            app:layout_constraintBottom_toTopOf="@+id/btn_add_node_video_toys"
+            app:layout_constraintLeft_toLeftOf="parent"
+            />
+
+        <Button
+            android:id="@+id/btn_add_node_video_toys"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@color/white"
+            android:padding="10dp"
+            android:text="添加一个节点 （使用 Toys 视频）"
+            android:textColor="@color/black"
+            app:layout_constraintBottom_toTopOf="@+id/btn_rotate_anchor"
+            app:layout_constraintLeft_toLeftOf="parent"
+            />
+
+        <Button
+            android:id="@+id/btn_rotate_anchor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@color/white"
+            android:padding="10dp"
+            android:text="旋转 MP4 视频节点"
+            android:textColor="@color/black"
+            app:layout_constraintBottom_toTopOf="@+id/btn_add_light"
+            app:layout_constraintLeft_toLeftOf="parent" />
+
+        <Button
+            android:id="@+id/btn_add_light"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@color/white"
+            android:padding="10dp"
+            android:visibility="gone"
+            android:text="添加一个聚光灯"
+            android:textColor="@color/black"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <Button
+        android:id="@+id/btn_show_hide_options"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="显示选项"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
